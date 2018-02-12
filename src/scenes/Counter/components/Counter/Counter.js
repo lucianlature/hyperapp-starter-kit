@@ -1,5 +1,4 @@
 import { h } from 'hyperapp';
-import Nav from '../Navigation';
 import Description from '../Description';
 
 /**
@@ -17,7 +16,6 @@ export default ({
   },
 }) =>
   <div class="counter">
-    <Nav />
     <Description />
     <section>
       <button

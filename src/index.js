@@ -10,6 +10,7 @@ import Layout from './components/Layout/Layout';
 import Home from './scenes/Home';
 import About from './scenes/About';
 import Topics from './scenes/Topics';
+import Counter from './scenes/Counter';
 
 const {
   location: mainLocation,
@@ -22,15 +23,28 @@ const {
   actions,
 
   // VIEW
-  (/* appState, appActions */) => (
-      <Layout>
-            <Switch>
-                <Route path="/" render={Home} />
-                <Route path="/about" render={About} />
-                <Route parent path="/topics" render={Topics} />
-            </Switch>
-      </Layout>
-  ),
+  (appState, appActions) => {
+    const renderScene = Component => ({ location: l, match: m }) => h(Component, {
+      location: l,
+      match: m,
+      state: appState,
+      actions: appActions,
+    });
+
+    return (
+        <Layout>
+                <Switch>
+                    <Route path="/" render={Home} />
+                    <Route
+                        path="/counter"
+                        render={renderScene(Counter)}
+                    />
+                    <Route parent path="/topics" render={Topics} />
+                    <Route path="/about" render={About} />
+                </Switch>
+        </Layout>
+    );
+  },
 
   // CONTAINER
   document.body,
