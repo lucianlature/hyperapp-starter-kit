@@ -2,7 +2,7 @@ import { h } from 'hyperapp';
 
 export default () =>
   <div>
-    <h1>hyperapp-one</h1>
-    <p><em>With JSX and Parcel!</em></p>
-    <hr />
+    <h2>hyperapp-one</h2>
+    <p>With JSX and Parcel!</p>
+    <hr class="uk-divider-icon" />
   </div>;

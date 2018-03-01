@@ -1,4 +1,7 @@
+const add = ({ num }) => ({ num: num + 1 });
+const sub = ({ num }) => ({ num: num - 1 });
+
 export default {
-  add: (/* event (e) */) => ({ num }) => ({ num: num + 1 }),
-  sub: (/* event (e) */) => ({ num }) => ({ num: num - 1 }),
+  add: (/* event (e) */) => add,
+  sub: (/* event (e) */) => sub,
 };
