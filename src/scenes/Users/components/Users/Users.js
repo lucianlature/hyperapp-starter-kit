@@ -7,14 +7,14 @@ export default ({
   onCancelFetch,
 }) =>
     <div>
-        <div>Status: { fetchStatus }</div>
+        <div class="status">Status: { fetchStatus }</div>
         <button onclick={ onFetch }>Fetch users</button>
         <button onclick={ onCancelFetch }>Cancel</button>
-        <ul>
+        <ol class="list">
         {
             users.map(user => (
                 <li key={ user.id }>{ user.first_name } { user.last_name }</li>
             ))
         }
-        </ul>
+        </ol>
     </div>;

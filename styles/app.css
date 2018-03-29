@@ -1,3 +1,157 @@
+/* alternative color: #975751 */
+
+html {
+  line-height: 1;
+}
+
+body {
+  align-items: center;
+  background-color: #111;
+  display: flex;
+  font-family: Helvetica Neue, sans-serif;
+  height: 100vh;
+  justify-content: center;
+  margin: 0;
+  padding: 0;
+  text-align: left;
+}
+
+h1 {
+  color: #00caff;
+  font-weight: 100;
+  font-size: 8em;
+  margin: 0;
+  padding-bottom: 15px;
+}
+
+button {
+  background: #111;
+  border: 1px solid #00caff;
+  color: #00caff;
+  font-size: 2em;
+  font-weight: 100;
+  margin: 0;
+  outline: none;
+  padding: 5px 15px;
+  transition: background .2s;
+}
+button:hover, button:active, button:disabled {
+  background: #00caff;
+  color: #111;
+}
+button:active {
+  outline: 2px solid #00caff;
+}
+button:focus {
+  border: 1px solid #00caff;
+}
+
+button + button {
+  margin-left: 3px;
+}
+
+.status {
+  color: #E1B167;
+  font-size: 1.2.em;
+  padding: 15px 0;
+}
+
+.navigation {
+  margin: 0;
+  padding: 0;
+  list-style-type: none;
+  display: flex;
+  flex-flow: row wrap;
+}
+
+.navigation li {
+  margin: 0;
+  padding: 0;
+  border-width: 0 1px 0 0;
+}
+
+.navigation a {
+  color: #B6A392;
+  font-weight: 400;
+  padding: .75em 1.25em;
+  text-decoration: none;
+  transition: background .25s ease-in-out;
+}
+
+.list {
+  color: #d9d9d9;
+  background-color: transparent;
+  box-sizing: content-box;
+  padding: 0;
+  margin: auto;
+  max-width: 50%;
+  /* Ordered list with custom counter */
+  /* Style the title, date & comments of each entry */
+}
+ol.list {
+  counter-reset: li;
+  overflow: hidden;
+  border: 0px solid #d9d9d9;
+  margin: 0;
+  padding: 0px;
+}
+.list li {
+  float: left;
+  clear: left;
+  width: 100%;
+  margin: 0;
+  list-style: none;
+}
+ol.list,
+.list li,
+.list li a {
+  display: block;
+}
+.list li a {
+  font-size: 11px;
+  height: 59px;
+  position: relative;
+  text-decoration: none;
+}
+
+.list a:link,
+.list a:visited,
+.list a:hover,
+.list a:active {
+  color: #000000;
+}
+.list ol li a:hover .main-image:after,
+.list ol li a:hover .no-main-image:after {
+  color: #2690d8;
+}
+.list ol li a:active .main-image:after,
+.list ol li a:active .no-main-image:after,
+.list ol li.active a .main-image:after,
+.list ol li.active a .no-main-image:after {
+  color: #777777;
+}
+.list li + li {
+  border-top: 0px solid #d9d9d9;
+}
+.list li span {
+  display: block;
+  line-height: 1.5em;
+}
+.list span.link-title {
+  letter-spacing: 1px;
+  text-transform: uppercase;
+  padding-top: 0.6875em;
+  font-size: 1.5em;
+}
+.list span.link-excerpt {
+  color: #c3c3c3;
+}
+
+
+footer {
+  color: #7e7b7b;
+}
+
 .loader,
 .loader:after {
   border-radius: 50%;

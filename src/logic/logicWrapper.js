@@ -6,71 +6,41 @@ import 'rxjs/add/operator/mergeMap';
 import 'rxjs/add/operator/share';
 import 'rxjs/add/operator/throttleTime';
 
-import createLogicAction$ from './createLogicAction$';
-
-function matchesType(tStrArrRe, type) {
-  /* istanbul ignore if  */
-  if (!tStrArrRe) { return false; } // nothing matches none
-  if (typeof tStrArrRe === 'string') {
-    return (tStrArrRe === type || tStrArrRe === '*');
-  }
-  if (Array.isArray(tStrArrRe)) {
-    return tStrArrRe.some(x => matchesType(x, type));
-  }
-  // else assume it is a RegExp
-  return tStrArrRe.test(type);
-}
+// import createLogicAction$ from './createLogicAction$';
+import { matchesType } from './utils';
+import LogicAction from './LogicAction';
 
 export default function logicWrapper(logic, monitor$, deps) {
-  const {
-    type,
-    cancelType,
-    latest,
-    debounce,
-    throttle,
-  } = logic;
+  const { type, cancelType, latest, debounce, throttle } = logic;
 
   // cancel on cancelType or if take latest specified
-  const cancelTypes = []
-    .concat((type && latest) ? type : [])
-    .concat(cancelType || []);
-
-  const debouncing = (debounce)
-    ? act$ => act$.debounceTime(debounce)
-    : act$ => act$;
-
-  const throttling = (throttle)
-    ? act$ => act$.throttleTime(throttle)
-    : act$ => act$;
-
+  const cancelTypes = [].concat(type && latest ? type : []).concat(cancelType || []);
+  const debouncing = debounce ? act$ => act$.debounceTime(debounce) : act$ => act$;
+  const throttling = throttle ? act$ => act$.throttleTime(throttle) : act$ => act$;
   const limiting = act => throttling(debouncing(act));
 
   return function wrappedLogic(actionIn$) {
     // we want to share the same copy amongst all here
     const action$ = actionIn$.share();
 
-    const cancel$ = (cancelTypes.length)
+    const cancel$ = cancelTypes.length
       ? action$.filter(action => matchesType(cancelTypes, action.type))
       : Observable.create((/* obs */) => {}); // shouldn't complete
 
     // types that don't match will bypass this logic
     const nonMatchingAction$ = action$.filter(action => !matchesType(type, action.type));
 
-    const matchingAction$ =
-      limiting(action$.filter(action => matchesType(type, action.type)))
-        .mergeMap(action =>
-          createLogicAction$({
-            action,
-            logic,
-            state: {}, // state
-            deps, // deps
-            cancel$,
-            monitor$,
-          }));
-
-    return Observable.merge(
-      nonMatchingAction$,
-      matchingAction$,
+    const matchingAction$ = limiting(action$.filter(action => matchesType(type, action.type))).mergeMap(action =>
+      LogicAction.createLogicAction$({
+        action,
+        logic,
+        state: {}, // state
+        deps, // deps
+        cancel$,
+        monitor$
+      })
     );
+
+    return Observable.merge(nonMatchingAction$, matchingAction$);
   };
 }

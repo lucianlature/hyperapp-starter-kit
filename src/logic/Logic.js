@@ -1,3 +1,5 @@
+import { typeToStrFns, setIfUndefined } from './utils';
+
 const allowedOptions = [
   'name',
   'type',
@@ -9,28 +11,14 @@ const allowedOptions = [
   'transform',
   'process',
   'processOptions',
-  'warnTimeout',
+  'warnTimeout'
 ];
 
-const allowedProcessOptions = [
-  'dispatchReturn',
-  'dispatchMultiple',
-  'successType',
-  'failType',
-];
+const allowedProcessOptions = ['dispatchReturn', 'dispatchMultiple', 'successType', 'failType'];
 
 const { NODE_ENV } = process.env;
 
-/* if type is a fn call toString() to get type, redux-actions
-  if array, then check members */
-function typeToStrFns(type) {
-  if (Array.isArray(type)) { return type.map(x => typeToStrFns(x)); }
-  return (typeof type === 'function') ?
-    type.toString() :
-    type;
-}
-
-function identityValidation({ action }, allow /* , reject */) {
+function identityValidation({ action }, allow) {
   allow(action);
 }
 
@@ -39,14 +27,39 @@ function emptyProcess(_, dispatch, done) {
   done();
 }
 
-function setIfUndefined(obj, propName, propValue) {
-  if (typeof obj[propName] === 'undefined') {
-    // eslint-disable-next-line no-param-reassign
-    obj[propName] = propValue;
-  }
-}
+class Logic {
+  /**
+   * @param {object} validatedLogicObject validated logic object
+   * @param {string} validatedLogicObject.name string name
+   * @param {string} validatedLogicObject.type action type string name
+   * @param {string} validatedLogicObject.cancelType action type string name
+   */
+  constructor({ name, type, cancelType, ...validatedLogicObject }) {
+    this.name = typeToStrFns(name);
+    this.type = typeToStrFns(type);
+    this.cancelType = typeToStrFns(cancelType);
 
-/**
+    Object.assign(this, validatedLogicObject);
+  }
+
+  /**
+   * Implement default names for logic using type and idx
+   * @param {object} logic named or unnamed logic object
+   * @return {object} namedLogic named logic
+   */
+  static naming(logic) {
+    if (logic.name) {
+      return logic;
+    }
+
+    const { idx } = logic;
+    return {
+      ...logic,
+      name: `L(${logic.type.toString()})-${idx}`
+    };
+  }
+
+  /**
    Validate and augment logic object to be used in logicMiddleware.
    The returned object has the same structure as the supplied
    logicOptions argument but it will have been validated and defaults
@@ -123,84 +136,90 @@ function setIfUndefined(obj, propName, propValue) {
    @returns {object} validated logic object which can be used in
      logicMiddleware contains the same properties as logicOptions but
      has defaults applied.
- */
-export default function createLogic(logicOptions = {}) {
-  const invalidOptions = Object.keys(logicOptions)
-    .filter(k => allowedOptions.indexOf(k) === -1);
-  if (invalidOptions.length) {
-    throw new Error(`unknown or misspelled option(s): ${invalidOptions}`);
+   */
+  static createLogic(logicOptions = {}) {
+    const invalidOptions = Object.keys(logicOptions).filter(k => allowedOptions.indexOf(k) === -1);
+    if (invalidOptions.length) {
+      throw new Error(`unknown or misspelled option(s): ${invalidOptions}`);
+    }
+
+    const {
+      name,
+      type,
+      cancelType,
+      warnTimeout = 60000,
+      latest = false,
+      debounce = 0,
+      throttle = 0,
+      validate,
+      transform,
+      process = emptyProcess,
+      processOptions = {}
+    } = logicOptions;
+
+    if (!type) {
+      throw new Error("type is required, use '*' to match all actions");
+    }
+
+    if (validate && transform) {
+      throw new Error('logic cannot define both the validate and transform hooks they are aliases');
+    }
+
+    if (typeof processOptions.warnTimeout !== 'undefined') {
+      throw new Error('warnTimeout is a top level createLogic option, not a processOptions option');
+    }
+
+    const invalidProcessOptions = Object.keys(processOptions).filter(k => allowedProcessOptions.indexOf(k) === -1);
+    if (invalidProcessOptions.length) {
+      throw new Error(`unknown or misspelled processOption(s): ${invalidProcessOptions}`);
+    }
+
+    const validateDefaulted = !validate && !transform ? identityValidation : validate;
+
+    if (NODE_ENV !== 'production' && typeof processOptions.dispatchMultiple !== 'undefined' && warnTimeout !== 0) {
+      // eslint-disable-next-line no-console
+      console.error(
+        `warning: in logic for type(s): ${type} - dispatchMultiple is always true in next version. For non-ending logic, set warnTimeout to 0`
+      );
+    }
+
+    // use process fn signature to determine some processOption defaults
+    // for dispatchReturn and dispatchMultiple
+    switch (process.length) {
+      case 0: // process() - dispatchReturn
+      case 1: // process(deps) - dispatchReturn
+        setIfUndefined(processOptions, 'dispatchReturn', true);
+        break;
+      case 2: // process(deps, dispatch) - single dispatch (deprecated)
+        if (NODE_ENV !== 'production' && !processOptions.dispatchMultiple && warnTimeout !== 0) {
+          // eslint-disable-next-line no-console
+          console.error(
+            `warning: in logic for type(s): ${type} - single-dispatch mode is deprecated, call done when finished dispatching. For non-ending logic, set warnTimeout: 0`
+          );
+        }
+        // nothing to do, defaults are fine
+        break;
+      case 3: // process(deps, dispatch, done) - multi-dispatch
+      default:
+        // allow for additional params to come later
+        setIfUndefined(processOptions, 'dispatchMultiple', true);
+        break;
+    }
+
+    return new Logic({
+      name,
+      type,
+      cancelType,
+      validate: validateDefaulted,
+      latest,
+      debounce,
+      throttle,
+      transform,
+      process,
+      processOptions,
+      warnTimeout
+    });
   }
-
-  const {
-    name, type, cancelType,
-    warnTimeout = 60000,
-    latest = false, debounce = 0, throttle = 0,
-    validate, transform, process = emptyProcess,
-    processOptions = {},
-  } = logicOptions;
-
-  if (!type) {
-    throw new Error('type is required, use \'*\' to match all actions');
-  }
-
-  if (validate && transform) {
-    throw new Error('logic cannot define both the validate and transform hooks they are aliases');
-  }
-
-  if (typeof processOptions.warnTimeout !== 'undefined') {
-    throw new Error('warnTimeout is a top level createLogic option, not a processOptions option');
-  }
-
-  const invalidProcessOptions = Object.keys(processOptions)
-    .filter(k => allowedProcessOptions.indexOf(k) === -1);
-  if (invalidProcessOptions.length) {
-    throw new Error(`unknown or misspelled processOption(s): ${invalidProcessOptions}`);
-  }
-
-  const validateDefaulted = (!validate && !transform)
-    ? identityValidation
-    : validate;
-
-  if (NODE_ENV !== 'production' &&
-    typeof processOptions.dispatchMultiple !== 'undefined' &&
-    warnTimeout !== 0) {
-    // eslint-disable-next-line no-console
-    console.error(`warning: in logic for type(s): ${type} - dispatchMultiple is always true in next version. For non-ending logic, set warnTimeout to 0`);
-  }
-
-  // use process fn signature to determine some processOption defaults
-  // for dispatchReturn and dispatchMultiple
-  switch (process.length) {
-    case 0: // process() - dispatchReturn
-    case 1: // process(deps) - dispatchReturn
-      setIfUndefined(processOptions, 'dispatchReturn', true);
-      break;
-    case 2: // process(deps, dispatch) - single dispatch (deprecated)
-      if (NODE_ENV !== 'production' &&
-        !processOptions.dispatchMultiple
-        && warnTimeout !== 0) {
-        // eslint-disable-next-line no-console
-        console.error(`warning: in logic for type(s): ${type} - single-dispatch mode is deprecated, call done when finished dispatching. For non-ending logic, set warnTimeout: 0`);
-      }
-      // nothing to do, defaults are fine
-      break;
-    case 3: // process(deps, dispatch, done) - multi-dispatch
-    default: // allow for additional params to come later
-      setIfUndefined(processOptions, 'dispatchMultiple', true);
-      break;
-  }
-
-  return {
-    name: typeToStrFns(name),
-    type: typeToStrFns(type),
-    cancelType: typeToStrFns(cancelType),
-    latest,
-    debounce,
-    throttle,
-    validate: validateDefaulted,
-    transform,
-    process,
-    processOptions,
-    warnTimeout,
-  };
 }
+
+export default Logic;

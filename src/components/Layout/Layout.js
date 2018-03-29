@@ -1,9 +1,9 @@
 import { h } from 'hyperapp';
 import Navigation from '../Navigation/Navigation';
 
-export default ({ title }, children) => (
-  <div uk-sticky class="uk-navbar-container tm-navbar-container uk-active">
-    <div class="uk-container uk-container-expand">
+export default ({}, children) => (
+  <div>
+    <div>
         <header>
         <Navigation />
         </header>

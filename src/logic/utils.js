@@ -1,101 +1,75 @@
-import wrapper from './logicWrapper';
-
-/**
-  Find duplicates in arrLogic by checking if ref to same logic object
-  @param {array} arrLogic array of logic to check
-  @return {array} array of indexes to duplicates, empty array if none
- */
-const findDuplicates = arrLogic => arrLogic.reduce((acc, x1, idx1) => {
-  if (arrLogic.some((x2, idx2) => (idx1 !== idx2 && x1 === x2))) {
-    acc.push(idx1);
-  }
-  return acc;
-}, []);
-
 const identity = x => x;
-
-/**
- * Implement default names for logic using type and idx
- * @param {object} logic named or unnamed logic object
- * @param {number} idx  index in the logic array
- * @return {object} namedLogic named logic
- */
-export const naming = (logic, idx) => {
-  if (logic.name) { return logic; }
-  return {
-    ...logic,
-    name: `L(${logic.type.toString()})-${idx}`,
-  };
-};
 
 export const isFn = fn => typeof fn === 'function';
 
 // From: https://davidwalsh.name/javascript-arguments
-const getFunctionArgs = (func) => {
+const getFunctionArgs = func => {
   // First match everything inside the function argument parens.
   const args = func.toString().match(/function\s.*?\(([^)]*)\)/)[1];
 
   // Split the arguments string into an array comma delimited.
-  return args.split(',')
-    // Ensure no inline comments are parsed and trim the whitespace.
-    .map(arg => arg.replace(/\/\*.*\*\//, '').trim())
-    // Ensure no undefined values are added.
-    .filter(arg => arg);
+  return (
+    args
+      .split(',')
+      // Ensure no inline comments are parsed and trim the whitespace.
+      .map(arg => arg.replace(/\/\*.*\*\//, '').trim())
+      // Ensure no undefined values are added.
+      .filter(arg => arg)
+  );
 };
 const functionToString = func => `function ${func.name}(${getFunctionArgs(func).join(', ')}) {}`;
+
 export const debug = (msg, rest) => {
-  const log = isFn(rest)
-    ? functionToString(rest)
-    : JSON.stringify(rest);
+  const log = isFn(rest) ? functionToString(rest) : JSON.stringify(rest);
 
   console.log(msg, log);
 };
 
-export const applyLogic = (
-  logic,
-  state,
-  next,
-  sub,
-  actionIn$,
-  deps,
-  startLogicCount,
-  monitor$,
-) => {
-  if (!state) { throw new Error('state is not defined'); }
+// export const applyLogic = (
+//   logic,
+//   state,
+//   next,
+//   sub,
+//   actionIn$,
+//   deps,
+//   startLogicCount,
+//   monitor$,
+// ) => {
+//   if (!state) { throw new Error('state is not defined'); }
 
-  if (sub) {
-    sub.unsubscribe();
-  }
+//   if (sub) {
+//     sub.unsubscribe();
+//   }
 
-  const wrappedLogic = logic.map((mappedLogic, idx) => {
-    const namedLogic = naming(mappedLogic, idx + startLogicCount);
-    return wrapper(namedLogic, state, deps, monitor$);
-  });
+//   const wrappedLogic = logic.map((mappedLogic, idx) => {
+//     const namedLogic = naming(mappedLogic, idx + startLogicCount);
+//     return wrapper(namedLogic, state, deps, monitor$);
+//   });
 
-  const actionOut$ = wrappedLogic.reduce((acc$, wep) => wep(acc$), actionIn$);
+//   const actionOut$ = wrappedLogic.reduce((acc$, wep) => wep(acc$), actionIn$);
 
-  const newSub = actionOut$.subscribe((action) => {
-    debug('actionEnd$', action);
-    try {
-      const result = action();
-      debug('result', result);
-    } catch (err) {
-      // eslint-disable-next-line no-console
-      // console.error(
-      //  'error in mw dispatch or next call, probably in middlware/reducer/render fn:', err);
-      // const msg = (err && err.message) ? err.message : err;
-      // monitor$.next({ action, err: msg, op: 'nextError' });
-    }
-    // at this point, action is the transformed action, not original
-    monitor$.next({ nextAction: action, op: 'bottom' });
-  });
+//   const newSub = actionOut$.subscribe((action) => {
+//     debug('actionEnd$', action);
+//     try {
+//       const result = action();
+//       debug('result', result);
+//     } catch (err) {
+//       // eslint-disable-next-line no-console
+//       // console.error(
+//       //  'error in mw dispatch or next call, probably in middlware/reducer/render fn:', err);
+//       // const msg = (err && err.message) ? err.message : err;
+//       // monitor$.next({ action, err: msg, op: 'nextError' });
+//     }
+//     // at this point, action is the transformed action, not original
+//     monitor$.next({ nextAction: action, op: 'bottom' });
+//   });
 
-  return {
-    action$: actionOut$,
-    sub: newSub,
-    logicCount: startLogicCount + logic.length,
-  };
-};
+//   return {
+//     action$: actionOut$,
+//     sub: newSub,
+//     logicCount: startLogicCount + logic.length,
+//   };
+// };
 
 /**
  * Composes single-argument functions from right to left. The rightmost
@@ -119,11 +93,42 @@ export const compose = (...funcs) => {
   return funcs.reduce((a, b) => (...args) => a(b(...args)));
 };
 
+/**
+ * if type is a fn call toString() to get type, redux-actions
+ * if array, then check members
+ */
+export const typeToStrFns = type => {
+  if (Array.isArray(type)) {
+    return type.map(x => typeToStrFns(x));
+  }
+  return typeof type === 'function' ? type.toString() : type;
+};
+
+export const setIfUndefined = (obj, propName, propValue) => {
+  if (typeof obj[propName] === 'undefined') {
+    // eslint-disable-next-line no-param-reassign
+    obj[propName] = propValue;
+  }
+};
+
+export const matchesType = (tStrArrRe, type) => {
+  /* istanbul ignore if  */
+  if (!tStrArrRe) {
+    return false;
+  } // nothing matches none
+  if (typeof tStrArrRe === 'string') {
+    return tStrArrRe === type || tStrArrRe === '*';
+  }
+  if (Array.isArray(tStrArrRe)) {
+    return tStrArrRe.some(x => matchesType(x, type));
+  }
+  // else assume it is a RegExp
+  return tStrArrRe.test(type);
+};
+
 export default {
-  findDuplicates,
   identity,
-  naming,
-  applyLogic,
+  matchesType,
   debug,
-  isFn,
+  isFn
 };
