@@ -9,27 +9,29 @@ module.exports = {
         use: {
           loader: 'babel-loader',
           options: {
-            plugins: [
-              ['@babel/plugin-transform-react-jsx', { pragma: 'h' }],
-            ],
+            plugins: [['@babel/plugin-transform-react-jsx', { pragma: 'h' }]],
             presets: [
-              ['@babel/preset-env', {
-                shippedProposals: true,
-                modules: false,
-                comments: true,
-                targets: {
-                  browsers: [
-                    'last 2 versions',
-                  ],
-                },
-              }],
-            ],
-          },
-        },
+              [
+                '@babel/preset-env',
+                {
+                  shippedProposals: true,
+                  modules: false,
+                  useBuiltIns: 'usage',
+                  comments: true,
+                  targets: {
+                    browsers: ['last 2 versions', 'safari > 8', 'not ie < 11']
+                  }
+                }
+              ]
+            ]
+          }
+        }
       },
-    ],
+      {
+        test: /\.css$/,
+        use: ['style-loader', { loader: 'css-loader', options: { importLoaders: 1 } }, 'postcss-loader']
+      }
+    ]
   },
-  plugins: [
-    new HtmlWebpackPlugin({ template: './index.html' }),
-  ],
+  plugins: [new HtmlWebpackPlugin({ template: './index.html' })]
 };

@@ -6,9 +6,9 @@ const client = new ApolloClient({
   link: new HttpLink({
     uri: 'http://swapi.apis.guru',
     // Additional fetch options like `credentials` or `headers`
-    credentials: 'same-origin',
+    credentials: 'same-origin'
   }),
-  cache: new InMemoryCache(),
+  cache: new InMemoryCache()
 });
 
 export default client;

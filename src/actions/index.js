@@ -7,5 +7,5 @@ export default {
   location: location.actions,
   counter: counterActions,
   films: filmsActions,
-  [usersKey]: usersActions,
+  [usersKey]: usersActions
 };

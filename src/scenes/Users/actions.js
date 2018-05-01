@@ -14,20 +14,20 @@ export const usersFetchRejected = `${key}/FETCH_REJECTED`;
 
 export const actions = {
   [usersFetch]: () => () => ({
-    fetchStatus: `fetching... ${(new Date()).toLocaleString()}`,
-    list: [],
+    fetchStatus: `fetching... ${new Date().toLocaleString()}`,
+    list: []
   }),
   [usersFetchFulfilled]: data => state => ({
     ...state,
     list: data,
-    fetchStatus: `Results from ${(new Date()).toLocaleString()}`,
+    fetchStatus: `Results from ${new Date().toLocaleString()}`
   }),
   [usersFetchRejected]: error => state => ({
     ...state,
-    fetchStatus: `errored: ${error}`,
+    fetchStatus: `errored: ${error}`
   }),
   [usersFetchCancel]: () => state => ({
     ...state,
-    fetchStatus: 'user cancelled',
-  }),
+    fetchStatus: 'user cancelled'
+  })
 };

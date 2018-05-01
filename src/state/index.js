@@ -8,5 +8,5 @@ export default getStateFromStorage() || {
   counter: counterState,
   location: location.state,
   films: filmsState,
-  users: usersState,
+  users: usersState
 };

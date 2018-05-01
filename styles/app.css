@@ -7,6 +7,7 @@ html {
 body {
   align-items: center;
   background-color: #111;
+  color: #00caff;
   display: flex;
   font-family: Helvetica Neue, sans-serif;
   height: 100vh;
@@ -20,6 +21,22 @@ h1 {
   color: #00caff;
   font-weight: 100;
   font-size: 8em;
+  margin: 0;
+  padding-bottom: 15px;
+}
+
+h2 {
+  color: #00caff;
+  font-weight: 100;
+  font-size: 7em;
+  margin: 0;
+  padding-bottom: 15px;
+}
+
+code {
+  color: #00caff;
+  font-weight: 100;
+  font-size: 5em;
   margin: 0;
   padding-bottom: 15px;
 }
@@ -71,11 +88,16 @@ button + button {
 }
 
 .navigation a {
+  display: block;
   color: #B6A392;
   font-weight: 400;
   padding: .75em 1.25em;
   text-decoration: none;
   transition: background .25s ease-in-out;
+}
+
+.navigation li:first-child a {
+  padding-left: 0;
 }
 
 .list {

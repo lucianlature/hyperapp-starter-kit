@@ -3,12 +3,7 @@ import { usersFetch, usersFetchCancel } from './actions';
 import { selectors } from './state';
 import Users from './components/Users/Users';
 
-export default ({
-  state,
-  actions: {
-    users: usersActions,
-  },
-}) => {
+export default ({ state, actions: { users: usersActions } }) => {
   const users = selectors.users(state);
   const fetchStatus = selectors.fetchStatus(state);
 
@@ -17,10 +12,10 @@ export default ({
       <h1>Users</h1>
 
       <Users
-        users={ users }
-        fetchStatus={ fetchStatus }
-        onFetch={ usersActions[usersFetch] }
-        onCancelFetch={ usersActions[usersFetchCancel] }
+        users={users}
+        fetchStatus={fetchStatus}
+        onFetch={usersActions[usersFetch]}
+        onCancelFetch={usersActions[usersFetchCancel]}
       />
     </div>
   );

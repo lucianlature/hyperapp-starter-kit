@@ -13,7 +13,11 @@ import 'rxjs/add/operator/map';
 import 'rxjs/add/operator/mergeAll';
 import 'rxjs/add/operator/take';
 import 'rxjs/add/operator/takeUntil';
-import { debug /* confirmProps */ } from './utils';
+// import 'rxjs/Rx/pipe';
+// import { pipe } from 'rxjs/Rx';
+import { distinctUntilChanged, catchError, shareReplay } from 'rxjs/operators';
+
+// import { debug, confirmProps } from './utils';
 
 const UNHANDLED_LOGIC_ERROR = 'UNHANDLED_LOGIC_ERROR';
 const { NODE_ENV } = process.env;
@@ -30,16 +34,14 @@ class LogicAction {
       processOptions: { dispatchReturn, dispatchMultiple /* , successType, failType */ }
     } = logic;
 
-    debug('createLogicAction$ name = ', name);
-    // debug('createLogicAction$ action = ', action);
+    // debug('createLogicAction name = ', name);
+    // debug('createLogicAction action = ', action);
 
     monitor$.next({ action, name, op: 'begin' });
 
-    const intercept = logic.validate || logic.transform; // aliases
-    // once action reaches bottom, filtered, nextDisp, or cancelled
-    let interceptComplete = false;
+    // const intercept = logic.validate || logic.transform; // aliases
 
-    const logicActionObsCreate = logicActionObserver => {
+    const logicActionObserver = logicActionObserver => {
       function storeDispatch(act) {
         return state.dispatch(act);
       }
@@ -99,19 +101,6 @@ class LogicAction {
         });
       }
 
-      // create notification subject for process which we dispose of
-      // when take(1) or when we are done dispatching
-      const cancelled$ = new Subject().take(1);
-      cancel$.subscribe(cancelled$); // connect cancelled$ to cancel$
-      cancelled$.subscribe(() => {
-        if (!interceptComplete) {
-          monitor$.next({ action, name, op: 'cancelled' });
-        } else {
-          // marking these different so not counted twice
-          monitor$.next({ action, name, op: 'dispCancelled' });
-        }
-      });
-
       /* eslint-enable consistent-return */
       const dispatch$ = new Subject().mergeAll().takeUntil(cancel$);
       dispatch$
@@ -141,7 +130,7 @@ class LogicAction {
       // warnTimeout can be set to 0 to disable
       if (NODE_ENV !== 'production' && warnTimeout) {
         Observable.timer(warnTimeout)
-          // take until cancelled, errored, or completed
+          // take until cancelled, error-ed, or completed
           .takeUntil(cancelled$.defaultIfEmpty(true))
           .do(() => {
             // eslint-disable-next-line no-console
@@ -169,6 +158,7 @@ class LogicAction {
 
       function handleNextOrDispatch(shouldProcess, act, options) {
         const { useDispatch } = applyAllowRejectNextDefaults(options);
+
         if (shouldDispatch(act, useDispatch)) {
           monitor$.next({
             action,
@@ -288,18 +278,12 @@ class LogicAction {
         };
       }
 
-      function allow(act, options = AllowRejectNextDefaults) {
-        handleNextOrDispatch(true, act, options);
-      }
-
-      function reject(act, options = AllowRejectNextDefaults) {
-        handleNextOrDispatch(false, act, options);
-      }
+      // const _proxy = allow => (act, options = AllowRejectNextDefaults) => handleNextOrDispatch(allow, act, options);
 
       /* post if defined, then complete */
       function postIfDefinedOrComplete(act, act$) {
         if (act) {
-          act$.next(act); // triggers call to middleware's next()
+          act$.next(act);
         }
         interceptComplete = true;
         act$.complete();
@@ -309,13 +293,13 @@ class LogicAction {
         dispatch$.complete();
       }
 
-      intercept(depObj, allow, reject);
+      // intercept(depObj, _proxy(true), _proxy(false));
+      handleNextOrDispatch(true, depObj.action, AllowRejectNextDefaults);
     };
 
-    // logicAction$ is used for the mw next(action) call
-    const logicAction$ = Observable.create(logicActionObsCreate);
-    logicAction$.takeUntil(cancel$);
-    logicAction$.take(1);
+    const logicAction$ = Observable.create(logicActionObserver)
+      .take(1)
+      .takeUntil(cancel$);
 
     return logicAction$;
   }

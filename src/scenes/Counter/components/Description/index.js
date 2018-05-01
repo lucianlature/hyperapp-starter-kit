@@ -1,8 +1,9 @@
 import { h } from 'hyperapp';
 
-export default () =>
+export default () => (
   <div>
     <h2>hyperapp-one</h2>
-    <p>With JSX and Parcel!</p>
+    <p>With JSX and Webpack 4!</p>
     <hr class="uk-divider-icon" />
-  </div>;
+  </div>
+);

@@ -1,39 +1,31 @@
+import { action } from '@hyperapp/fx';
 import gql from 'graphql-tag';
-import client from '../../data/apollo-client';
 
 export default {
-//   fetchIds: ({ ids, loading }, actions, type) => {
-//     actions.toggleLoading();
-//     return actions
-//       .fetchFilms(type).catch(console.error)
-//       .then(actions.toggleLoading);
-//   },
-  toggleLoading: () => state => ({
-    loading: !state.loading,
-  }),
-  fetch: () => async (s, actions) => {
-    actions.toggleLoading();
-    const graphResponse = await client.query({
+  set: state => state,
+  getFilms: () => [
+    'graphQLQuery',
+    {
+      action: 'setFilms',
       query: gql`
-            query getAllFilms {
-                allFilms {
-                    totalCount
-                    edges {
-                        node {
-                            title
-                            director
-                            releaseDate
-                        }
-                    }
-                }
+        query getAllFilms {
+          allFilms {
+            totalCount
+            edges {
+              node {
+                title
+                director
+                releaseDate
+              }
             }
-        `,
-    });
-    actions.set(graphResponse.data.allFilms);
-
-    return actions.toggleLoading();
-  },
-  set: data => () => ({
-    films: data.edges,
-  }),
+          }
+        }
+      `
+    }
+  ],
+  fetch: () => [action('set', { loading: true }), action('getFilms'), action('set', { loading: false })],
+  setFilms: ({ loading, data }) => ({
+    films: data.allFilms.edges,
+    loading
+  })
 };

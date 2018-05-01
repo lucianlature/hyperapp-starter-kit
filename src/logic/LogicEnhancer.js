@@ -1,5 +1,5 @@
 // import { Observable } from 'rxjs/Observable';
-import { Subject } from 'rxjs/Subject';
+// import { Subject } from 'rxjs/Subject';
 import { BehaviorSubject } from 'rxjs/BehaviorSubject';
 import 'rxjs/add/operator/filter';
 import 'rxjs/add/operator/map';
@@ -10,13 +10,16 @@ import 'rxjs/add/operator/delay';
 import 'rxjs/add/operator/concatMap';
 import 'rxjs/add/observable/of';
 import 'rxjs/add/observable/from';
+import 'rxjs/add/observable/zip';
+
+import { StateStream } from './StateStream';
 
 import { debug } from './utils';
 import Logic from './Logic';
 import LogicWrapper from './LogicWrapper';
 
 // initial monitor op before anything else
-const OP_INIT = 'init';
+// const OP_INIT = 'init';
 
 class LogicEnhancer {
   /**
@@ -24,26 +27,32 @@ class LogicEnhancer {
    */
   constructor(...options) {
     Object.assign(this, ...options);
+
     this.logicSub = null;
-    // this.logic$ = Observable.from(this.logic); // .concatMap(val => val);
+    this.zip = null;
   }
 
-   /**
-   * @param {*} type
-   * @param {*} state
-   * @param {*} actions
+  /**
+   * @param {*} act
+   * @param {*} act.type
+   * @param {*} act.state
+   * @param {*} act.actions
    */
-  enhance(type, state, actions) {
-    if (type in this.logic) {
+  enhance(act) {
+    // get our current stream
+    const cur = this.stateStream$.getValue();
+    // set the state to the current + new
+    act.state = { ...act.state, ...cur };
+
+    if (act.type in this.logic) {
       // Apply logic
-      this.applyLogicFor(type);
+      this.applyLogicFor(act.type);
     }
 
-    this.startAction({
-      type,
-      state,
-      actions
-    });
+    this.stateStream$.next(act);
+
+    // this.actionSrc$.next(act);
+    // this.monitor$.next({ act, op: 'top' });
   }
 
   /**
@@ -56,20 +65,13 @@ class LogicEnhancer {
 
     const logic = this.logic[type];
     const namedLogic = Logic.naming(logic);
-    const actionOut$ = LogicWrapper(namedLogic, this.monitor$, this.deps)(this.actionSrc$);
-    this.logicSub = actionOut$.subscribe(actionEnd$ => {
-      debug('actEnd$', actionEnd$);
-      // at this point, action is the transformed action, not original
-      this.monitor$.next({ actionEnd$, op: 'bottom' });
-    });
-  }
+    const stateOut$ = LogicWrapper(namedLogic, this.stateStream$, this.deps);
 
-  /**
-   * @param {*} act
-   */
-  startAction(act) {
-    this.actionSrc$.next(act);
-    this.monitor$.next({ act, op: 'top' });
+    this.logicSub = stateOut$.subscribe(actionEnd => {
+      debug('actEnd', actionEnd);
+      // at this point, action is the transformed action, not original
+      // this.monitor$.next({ nextAction: actionEnd, op: 'bottom' });
+    });
   }
 
   /**
@@ -87,63 +89,64 @@ class LogicEnhancer {
   }
 
   static createLogicEnhancer(logic, deps) {
-    const monitor$ = new Subject(); // Monitor the execution flow
-    const lastPending$ = new BehaviorSubject({ op: OP_INIT });
+    // const monitor$ = new Subject(); // Monitor the execution flow
+    // const lastPending$ = new BehaviorSubject({ op: OP_INIT });
 
-    monitor$
-      .scan(
-        (acc, x) => {
-          // append a pending logic count
-          let pending = acc.pending || 0;
-          switch (x.op) { // eslint-disable-line default-case
-            case 'top': // action at top of logic stack
-            case 'begin': // starting into a logic
-              pending += 1;
-              break;
-            case 'end': // completed from a logic
-            case 'bottom': // action cleared bottom of logic stack
-            case 'nextDisp': // action changed type and executed
-            case 'filtered': // action filtered
-            case 'dispError': // error when dispatching
-            case 'cancelled': // action cancelled before intercept complete
-              // dispCancelled is not included here since
-              // already accounted for in the 'end' op
-              pending -= 1;
-              break;
-          }
-          const flow = {
-            ...x,
-            pending
-          };
-          // debug('x.op = ', x.op);
-          // debug('acc = ', acc);
-          return flow;
-        },
-        { pending: 0 }
-      )
-      .subscribe(lastPending$); // pipe to lastPending
+    // monitor$
+    //   .scan(
+    //     (acc, x) => {
+    //       // append a pending logic count
+    //       let pending = acc.pending || 0;
+    //       switch (x.op) { // eslint-disable-line default-case
+    //         case 'top': // action at top of logic stack
+    //         case 'begin': // starting into a logic
+    //           pending += 1;
+    //           break;
+    //         case 'end': // completed from a logic
+    //         case 'bottom': // action cleared bottom of logic stack
+    //         case 'nextDisp': // action changed type and executed
+    //         case 'filtered': // action filtered
+    //         case 'dispError': // error when dispatching
+    //         case 'cancelled': // action cancelled before intercept complete
+    //           // dispCancelled is not included here since
+    //           // already accounted for in the 'end' op
+    //           pending -= 1;
+    //           break;
+    //       }
+    //       const flow = {
+    //         ...x,
+    //         pending
+    //       };
+    //       // debug('x.op = ', x.op);
+    //       // debug('acc = ', acc);
+    //       return flow;
+    //     },
+    //     { pending: 0 }
+    //   )
+    //   .subscribe(lastPending$); // pipe to lastPending
 
     const appLogic = logic.reduce((globalLogic, mappedLogic, idx) => {
-      const globalLogic$ = globalLogic;
+      const _globalLogic = globalLogic;
       const mappedLogic$ = Logic.createLogic(mappedLogic);
 
       const { type } = mappedLogic$;
 
-      globalLogic$[type] = {
+      _globalLogic[type] = {
         ...mappedLogic$,
         idx
       };
 
-      return globalLogic$;
+      return _globalLogic;
     }, {});
 
-    const actionSrc$ = new Subject(); // logicEnhancer action stream
+    const stateStream$ = new StateStream();
+
+    // const actionSrc$ = new Subject(); // logicEnhancer action stream
     // let logicCount = 0; // used for implicit naming
     // const savedLogicArr = logicOrApp; // keep for uniqueness check
     return new LogicEnhancer({
-      // appLogic$,
-      monitor$,
-      actionSrc$,
+      stateStream$,
+      // actionsStream$,
       logic: appLogic,
       deps
     });

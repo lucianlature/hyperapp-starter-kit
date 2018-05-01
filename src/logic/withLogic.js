@@ -9,7 +9,7 @@ const enhanceActions = (actionsTemplate, logicEnhancer) =>
       ? data => (state, actions) => {
           let result = action(data);
           result = isFn(result) ? result(state, actions) : result;
-          logicEnhancer.enhance(type, state, actions);
+          logicEnhancer.enhance({ type, state: { ...state, ...result }, actions });
           return result;
         }
       : enhanceActions(action, logicEnhancer);
