@@ -67,6 +67,38 @@ button + button {
   margin-left: 3px;
 }
 
+label {
+  font-size: 12pt;
+  margin-right: 8px;
+}
+
+input[type=checkbox], input[type=radio] {
+  margin-right: 4px;
+}
+
+input[type=text] {
+  margin-left: 4px;
+}
+
+button.btn {
+  margin-right: 4px;
+  margin-bottom: 4px;
+}
+
+table {
+  font-size: 12pt;
+}
+
+li.hl {
+  background-color: #FFFFAA;
+}
+
+#tracer {
+  position: absolute;
+  top: 0;
+  right: 0;
+}
+
 .status {
   color: #E1B167;
   font-size: 1.2.em;
@@ -172,6 +204,11 @@ ol.list,
 
 footer {
   color: #7e7b7b;
+  font-size: 11pt;
+  position: absolute;
+  bottom: 0;
+  width: 100%;
+  height: 40px;
 }
 
 .loader,
